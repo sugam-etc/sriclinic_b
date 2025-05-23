@@ -16,7 +16,7 @@ const patientRoutes = require("./routes/patientRoutes");
 const saleRoutes = require("./routes/saleRoutes");
 const staffRoutes = require("./routes/staffRoutes");
 const supplierRoutes = require("./routes/supplierRoutes");
-
+const loginRoutes = require("./routes/loginRoutes");
 // Initialize app
 const app = express();
 
@@ -38,6 +38,7 @@ app.use("/api/sales", saleRoutes);
 app.use("/api/staffs", staffRoutes);
 app.use("/api/suppliers", supplierRoutes);
 app.use("/api/inventory", inventoryRoutes);
+app.use("/api/login", loginRoutes);
 
 // Start server
 const PORT = process.env.PORT || 5000;
