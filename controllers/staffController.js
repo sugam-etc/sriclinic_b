@@ -1,5 +1,4 @@
 const Staff = require("../models/Staff");
-const Staff = require("../models/Staff");
 const bcrypt = require("bcrypt"); // Add if not imported yet
 const jwt = require("jsonwebtoken"); // Add if needed for JWT
 
