@@ -1,6 +1,6 @@
 const Staff = require("../models/Staff");
-const bcrypt = require("bcrypt"); // Add if not imported yet
-const jwt = require("jsonwebtoken"); // Add if needed for JWT
+const bcrypt = require("bcrypt"); // Ensure bcrypt is imported here
+const jwt = require("jsonwebtoken"); // Ensure jwt is imported if you plan to use it
 
 // Get all staff
 exports.getAllStaff = async (req, res) => {
@@ -24,12 +24,22 @@ exports.getStaffById = async (req, res) => {
 };
 
 // Create staff
+// IMPORTANT: When creating new staff, ensure the password is sent in the request body.
+// The pre-save hook in the Staff model will hash it automatically.
 exports.createStaff = async (req, res) => {
   try {
     const newStaff = new Staff(req.body);
     await newStaff.save();
     res.status(201).json(newStaff);
   } catch (err) {
+    // Handle duplicate userId error specifically
+    if (err.code === 11000 && err.keyPattern && err.keyPattern.userId) {
+      return res
+        .status(409)
+        .json({
+          error: "User ID already exists. Please choose a different one.",
+        });
+    }
     res.status(400).json({ error: err.message });
   }
 };
@@ -37,8 +47,18 @@ exports.createStaff = async (req, res) => {
 // Update staff
 exports.updateStaff = async (req, res) => {
   try {
-    const updated = await Staff.findByIdAndUpdate(req.params.id, req.body, {
+    const { password, ...otherUpdates } = req.body;
+    let updates = otherUpdates; // If password is being updated, hash it before saving
+
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      updates.password = hashedPassword;
+    }
+
+    const updated = await Staff.findByIdAndUpdate(req.params.id, updates, {
       new: true,
+      runValidators: true, // Ensure schema validators run on update
     });
     if (!updated) return res.status(404).json({ message: "Staff not found" });
     res.json(updated);
@@ -74,22 +94,28 @@ exports.loginStaff = async (req, res) => {
     const isPasswordValid = await bcrypt.compare(password, staff.password);
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid userId or password" });
-    }
+    } // Generate token if needed (uncomment and configure JWT_SECRET in .env)
 
-    // Generate token if needed
-    // const token = jwt.sign({ id: staff._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+    const token = jwt.sign(
+      { id: staff._id, role: staff.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    ); // Send back staff info and token
 
-    // Send back staff info (and token if you generate one)
     res.json({
       message: "Login successful",
       staff: {
         id: staff._id,
         userId: staff.userId,
-        name: staff.name,
-        // token,
+        name: staff.fullName, // Assuming 'fullName' is the field for the staff's name
+        role: staff.role, // Include role for client-side routing
       },
+      token, // Include the token in the response
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Login error:", err); // Log the full error for debugging
+    res
+      .status(500)
+      .json({ error: "An internal server error occurred during login." });
   }
 };
