@@ -1,3 +1,4 @@
+const bcrypt = require("bcrypt");
 const Staff = require("../models/Staff");
 
 // Get all staff members
@@ -21,10 +22,18 @@ exports.getStaffById = async (req, res) => {
   }
 };
 
-// Create new staff
+// Create new staff (hash password)
 exports.createStaff = async (req, res) => {
   try {
-    const newStaff = new Staff(req.body);
+    const { password, ...rest } = req.body;
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newStaff = new Staff({
+      ...rest,
+      password: hashedPassword,
+    });
+
     const savedStaff = await newStaff.save();
     res.status(201).json(savedStaff);
   } catch (err) {
@@ -32,14 +41,21 @@ exports.createStaff = async (req, res) => {
   }
 };
 
-// Update staff by ID
+// Update staff by ID (optional: hash password if updating)
 exports.updateStaff = async (req, res) => {
   try {
+    const updateData = { ...req.body };
+
+    if (updateData.password) {
+      updateData.password = await bcrypt.hash(updateData.password, 10);
+    }
+
     const updatedStaff = await Staff.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updateData,
       { new: true }
     );
+
     if (!updatedStaff)
       return res.status(404).json({ message: "Staff not found" });
     res.json(updatedStaff);
@@ -60,17 +76,21 @@ exports.deleteStaff = async (req, res) => {
   }
 };
 
-// Login staff (basic login without hashing)
+// Login staff (compare password using bcrypt)
 exports.loginStaff = async (req, res) => {
   try {
     const { userId, password } = req.body;
-    const staff = await Staff.findOne({ userId, password });
+    const staff = await Staff.findOne({ userId });
 
     if (!staff) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Ideally use token-based authentication instead of returning full record
+    const isMatch = await bcrypt.compare(password, staff.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
     res.json(staff);
   } catch (err) {
     res.status(500).json({ message: "Login failed", error: err.message });

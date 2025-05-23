@@ -37,7 +37,7 @@ app.use("/api/patients", patientRoutes);
 app.use("/api/sales", saleRoutes);
 app.use("/api/staffs", staffRoutes);
 app.use("/api/suppliers", supplierRoutes);
-app.use("/api/inventory", inventoryRoutes);
+
 app.use("/api/login", loginRoutes);
 
 // Start server
