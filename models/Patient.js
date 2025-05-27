@@ -4,6 +4,7 @@ const patientSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     species: { type: String, required: true },
+    age: { type: String, required: true },
     breed: String,
     petCode: { type: String, unique: true },
     sex: String,
