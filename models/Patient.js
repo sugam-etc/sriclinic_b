@@ -6,13 +6,18 @@ const patientSchema = new mongoose.Schema(
     species: { type: String, required: true },
     age: { type: String, required: true },
     breed: String,
-    petCode: { type: String, unique: true },
+    petId: { type: String, unique: true }, // Unique pet identifier
     sex: String,
     ownerName: { type: String, required: true },
     ownerContact: { type: String, required: true },
-
     lastAppointment: Date,
     nextAppointment: Date,
+    medicalHistory: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "MedicalRecord",
+      },
+    ],
   },
   { timestamps: true }
 );

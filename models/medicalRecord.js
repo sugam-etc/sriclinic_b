@@ -10,10 +10,11 @@ const medicationSchema = new mongoose.Schema({
 
 const medicalRecordSchema = new mongoose.Schema(
   {
-    patientId: { type: String, required: true },
-    patientName: { type: String, required: true },
-    patientType: { type: String, required: true },
-    ownerName: { type: String, required: true },
+    patient: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Patient",
+      required: true,
+    },
     vetenarian: { type: String, required: true },
     date: { type: Date, default: Date.now },
     diagnosis: { type: String, required: true },

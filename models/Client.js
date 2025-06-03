@@ -2,11 +2,12 @@ const mongoose = require("mongoose");
 
 const clientSchema = new mongoose.Schema(
   {
-    owner1: { type: String, required: true },
-    owner2: String,
+    owner: { type: String, required: true },
+
     address: { type: String, required: true },
     contact: { type: String, required: true },
-    email: { type: String, required: true },
+    email: { type: String },
+    petId: { type: String },
     additionalInfo: {
       petName: String,
       species: String,

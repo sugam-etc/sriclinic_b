@@ -11,12 +11,18 @@ const inventoryItemSchema = new mongoose.Schema(
     costPrice: { type: Number, required: true, min: 0 },
     sellingPrice: { type: Number, required: true, min: 0 },
     manufacturer: { type: String },
-    supplier: { type: String, required: true },
+    // Corrected: 'supplier' should be an ObjectId reference, not a duplicate string field.
+    supplier: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Supplier",
+      required: true, // Making supplier required as per original string field
+    },
     batchNumber: { type: String },
     expiryDate: { type: Date },
     lastUpdated: { type: Date, default: Date.now },
     threshold: { type: Number, default: 10 },
     description: { type: String },
+    // Removed the duplicate 'supplier: { type: String, required: true }'
   },
   { timestamps: true }
 );
