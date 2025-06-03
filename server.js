@@ -16,6 +16,7 @@ const patientRoutes = require("./routes/patientRoutes");
 const saleRoutes = require("./routes/saleRoutes");
 const staffRoutes = require("./routes/staffRoutes");
 const supplierRoutes = require("./routes/supplierRoutes");
+const vaccinationRoutes = require("./routes/vaccinationRoutes.js");
 
 // Initialize app
 const app = express();
@@ -37,7 +38,7 @@ app.use("/api/patients", patientRoutes);
 app.use("/api/sales", saleRoutes);
 app.use("/api/staffs", staffRoutes);
 app.use("/api/suppliers", supplierRoutes);
-
+app.use("/api/vaccinations", vaccinationRoutes);
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
