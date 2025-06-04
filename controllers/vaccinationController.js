@@ -1,4 +1,5 @@
-const Vaccination = require("../models/Vaccination");
+// controllers/vaccinationController.js
+const Vaccination = require("../models/Vaccination"); // Correct path
 
 // Get all records
 const getAllVaccinations = async (req, res) => {
@@ -25,7 +26,15 @@ const getVaccinationById = async (req, res) => {
 // Create new
 const createVaccination = async (req, res) => {
   try {
-    const newVaccination = new Vaccination(req.body);
+    const newVaccinationData = { ...req.body };
+    // Set status to 'completed' only if both vaccineName and dateAdministered are provided
+    if (newVaccinationData.vaccineName && newVaccinationData.dateAdministered) {
+      newVaccinationData.status = "completed";
+    } else {
+      newVaccinationData.status = "upcoming"; // Otherwise, it's an upcoming appointment
+    }
+
+    const newVaccination = new Vaccination(newVaccinationData);
     await newVaccination.save();
     res.status(201).json(newVaccination);
   } catch (err) {
@@ -36,9 +45,17 @@ const createVaccination = async (req, res) => {
 // Update
 const updateVaccination = async (req, res) => {
   try {
+    const updatedData = { ...req.body };
+    // Set status to 'completed' only if both vaccineName and dateAdministered are now provided
+    if (updatedData.vaccineName && updatedData.dateAdministered) {
+      updatedData.status = "completed";
+    } else {
+      updatedData.status = "upcoming"; // Otherwise, it's an upcoming appointment
+    }
+
     const updated = await Vaccination.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updatedData,
       { new: true }
     );
     if (!updated) return res.status(404).json({ message: "Record not found" });

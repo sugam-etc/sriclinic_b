@@ -1,3 +1,4 @@
+// routes/vaccinationRoutes.js
 const express = require("express");
 const router = express.Router();
 
@@ -8,7 +9,7 @@ const {
   updateVaccination,
   deleteVaccination,
   searchVaccinations,
-} = require("../controllers/vaccinationController");
+} = require("../controllers/vaccinationController"); // Correct path
 
 router.get("/", getAllVaccinations);
 router.get("/search", searchVaccinations);
