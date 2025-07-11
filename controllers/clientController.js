@@ -1,8 +1,10 @@
+// clientController.js
 const Client = require("../models/Client");
+const Patient = require("../models/Patient");
 
 exports.getAllClients = async (req, res) => {
   try {
-    const clients = await Client.find();
+    const clients = await Client.find().populate("patients");
     res.json(clients);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -11,7 +13,7 @@ exports.getAllClients = async (req, res) => {
 
 exports.getClientById = async (req, res) => {
   try {
-    const client = await Client.findById(req.params.id);
+    const client = await Client.findById(req.params.id).populate("patients");
     if (!client) return res.status(404).json({ message: "Client not found" });
     res.json(client);
   } catch (error) {
@@ -45,7 +47,13 @@ exports.deleteClient = async (req, res) => {
   try {
     const client = await Client.findByIdAndDelete(req.params.id);
     if (!client) return res.status(404).json({ message: "Client not found" });
-    res.json({ message: "Client deleted successfully" });
+
+    // Delete all associated patients
+    await Patient.deleteMany({ _id: { $in: client.patients } });
+
+    res.json({
+      message: "Client and associated patients deleted successfully",
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

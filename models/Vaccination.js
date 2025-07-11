@@ -2,72 +2,64 @@ const mongoose = require("mongoose");
 
 const vaccinationSchema = new mongoose.Schema(
   {
-    // Patient Info
-    patientName: {
-      type: String,
-      required: false, // Made optional for initial booking
+    patient: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Patient",
+      required: [true, "Patient reference is required"],
     },
-    patientSpecies: {
-      type: String,
-      required: false, // Made optional for initial booking
-    },
-    patientBreed: {
-      type: String,
-      required: false,
-    },
-    patientAge: {
-      type: String,
-      required: false,
-    },
-    patientId: {
-      type: String,
-      required: false, // Made optional for initial booking
-    },
-
-    // Owner Info
-    ownerName: {
-      type: String,
-      required: false, // Made optional for initial booking
-    },
-    ownerPhone: {
-      type: String,
-      required: false, // Made optional for initial booking
-    },
-
-    // Vaccination Info
     vaccineName: {
       type: String,
-      required: false, // Made optional for upcoming appointments
+      required: [true, "Vaccine name is required"],
     },
     dateAdministered: {
       type: Date,
-      required: false, // Made optional for upcoming appointments
+      required: [true, "Date administered is required"],
+      default: Date.now,
     },
     nextDueDate: {
       type: Date,
-      required: false,
-    },
-    batchNumber: {
-      type: String,
-      required: false,
+      required: [true, "Next due date is required"],
     },
     manufacturer: {
       type: String,
-      required: false,
+      trim: true,
+    },
+    batchNumber: {
+      type: String,
+      trim: true,
+    },
+    administeringVeterinarian: {
+      type: String,
+      trim: true,
     },
     notes: {
       type: String,
-      required: false,
+      trim: true,
     },
-    // New field to distinguish between upcoming and completed
-    status: {
+    // You can also include vaccination-specific fields
+    isBooster: {
+      type: Boolean,
+      default: false,
+    },
+    routeOfAdministration: {
       type: String,
-      enum: ["upcoming", "completed"],
-      default: "upcoming", // Default to upcoming
-      required: true,
+      enum: ["Subcutaneous", "Intramuscular", "Oral", "Intranasal"],
+    },
+    reactionObserved: {
+      type: String,
+      trim: true,
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
 );
+
+// Indexes
+vaccinationSchema.index({ patient: 1, dateAdministered: -1 });
+vaccinationSchema.index({ vaccineName: 1 });
+vaccinationSchema.index({ nextDueDate: 1 });
 
 module.exports = mongoose.model("Vaccination", vaccinationSchema);

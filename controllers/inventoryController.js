@@ -1,9 +1,8 @@
 const InventoryItem = require("../models/InventoryItem");
-const Supplier = require("../models/Supplier");
+const Supplier = require("../models/Supplier"); // Ensure Supplier model is imported
 
 exports.getAllInventoryItems = async (req, res) => {
   try {
-    // Populate the supplier field to get full supplier details
     const items = await InventoryItem.find().populate("supplier");
     res.json(items);
   } catch (error) {
@@ -47,6 +46,7 @@ exports.createInventoryItem = async (req, res) => {
       await existingSupplier.save();
     } else {
       // If supplier exists, update its details (optional, but good for consistency)
+      // Only update if the incoming supplierData has a value, otherwise retain existing
       Object.assign(existingSupplier, {
         company: supplierData.company || existingSupplier.company,
         PAN: supplierData.PAN || existingSupplier.PAN,
@@ -79,6 +79,7 @@ exports.createInventoryItem = async (req, res) => {
     await inventoryItem.save();
 
     // 3. Push new inventory item's _id to supplier's supplyHistory array
+    // Ensure supplyHistory exists on the Supplier model
     existingSupplier.supplyHistory.push(inventoryItem._id);
     await existingSupplier.save();
 
@@ -99,7 +100,7 @@ exports.updateInventoryItem = async (req, res) => {
 
     let supplierIdToSet = null;
 
-    // If a supplier object is provided, handle it
+    // If a supplier object is provided in the request body, handle it
     if (supplierData && typeof supplierData === "object" && supplierData.name) {
       let existingSupplier = await Supplier.findOne({
         name: supplierData.name,
@@ -117,7 +118,7 @@ exports.updateInventoryItem = async (req, res) => {
         });
         await existingSupplier.save();
       } else {
-        // Update existing supplier details if provided
+        // Update existing supplier details if provided in the request
         Object.assign(existingSupplier, {
           company: supplierData.company || existingSupplier.company,
           PAN: supplierData.PAN || existingSupplier.PAN,
@@ -135,21 +136,39 @@ exports.updateInventoryItem = async (req, res) => {
 
     // Find the item to get its current supplier before updating
     const oldItem = await InventoryItem.findById(id);
+    if (!oldItem) return res.status(404).json({ message: "Item not found" });
 
-    // Update the inventory item, ensuring 'supplier' field is an ObjectId
+    // Construct the final update object
+    const finalUpdate = { ...updateData };
+    if (supplierIdToSet) {
+      // If a new supplier ID was determined from the request, use it
+      finalUpdate.supplier = supplierIdToSet;
+    } else if (oldItem.supplier) {
+      // If no new supplier is provided in the request, but the item already has one,
+      // explicitly keep the old supplier to satisfy the 'required' constraint.
+      finalUpdate.supplier = oldItem.supplier;
+    }
+    // If oldItem.supplier was null/undefined and no new supplier provided,
+    // finalUpdate.supplier will remain undefined, which will cause a validation error
+    // if the schema has 'required: true' and no default. This is intended behavior
+    // for a required field if it's truly not being provided for a new item or an update.
+
+    // Update the inventory item
     const item = await InventoryItem.findByIdAndUpdate(
       id,
-      { ...updateData, supplier: supplierIdToSet }, // Ensure supplier is an ObjectId here
+      finalUpdate, // Use the carefully constructed finalUpdate object
       { new: true, runValidators: true } // runValidators is important for schema validation
     );
 
-    if (!item) return res.status(404).json({ message: "Item not found" });
+    if (!item)
+      return res.status(404).json({ message: "Item not found after update" });
 
     // Handle supplyHistory updates if supplier changed
     if (
       oldItem &&
-      oldItem.supplier &&
-      !oldItem.supplier.equals(item.supplier)
+      oldItem.supplier && // Check if oldItem had a supplier
+      item.supplier && // Check if item now has a supplier
+      !oldItem.supplier.equals(item.supplier) // Check if supplier actually changed
     ) {
       // Remove item from old supplier's history
       const oldSupplier = await Supplier.findById(oldItem.supplier);
@@ -162,7 +181,11 @@ exports.updateInventoryItem = async (req, res) => {
 
       // Add item to new supplier's history
       const newSupplier = await Supplier.findById(item.supplier);
-      if (newSupplier && !newSupplier.supplyHistory.includes(item._id)) {
+      // Only add if newSupplier exists and the item is not already in its history
+      if (
+        newSupplier &&
+        !newSupplier.supplyHistory.some((itemId) => itemId.equals(item._id))
+      ) {
         newSupplier.supplyHistory.push(item._id);
         await newSupplier.save();
       }
@@ -170,12 +193,13 @@ exports.updateInventoryItem = async (req, res) => {
       item &&
       item.supplier &&
       oldItem &&
-      !oldItem.supplier &&
-      supplierIdToSet
+      !oldItem.supplier // Case where an item previously had no supplier, now gets one
     ) {
-      // Case where an item previously had no supplier, now gets one
       const newSupplier = await Supplier.findById(item.supplier);
-      if (newSupplier && !newSupplier.supplyHistory.includes(item._id)) {
+      if (
+        newSupplier &&
+        !newSupplier.supplyHistory.some((itemId) => itemId.equals(item._id))
+      ) {
         newSupplier.supplyHistory.push(item._id);
         await newSupplier.save();
       }
@@ -187,6 +211,12 @@ exports.updateInventoryItem = async (req, res) => {
     res.json(item);
   } catch (error) {
     console.error("Error updating inventory item:", error);
+    // Mongoose validation errors often have a 'name' property like 'ValidationError'
+    if (error.name === "ValidationError") {
+      return res
+        .status(400)
+        .json({ message: error.message, errors: error.errors });
+    }
     res.status(400).json({ message: error.message });
   }
 };
